@@ -29,7 +29,7 @@ Reply in English only, 2-3 short sentences.
 Don't start every sentence with "I".`
 }
 
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent`
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent`
 
 export async function generateObjectVoice(base64Image, mood, lang) {
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY
