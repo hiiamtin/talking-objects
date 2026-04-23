@@ -6,7 +6,7 @@ const isMobile = navigator.maxTouchPoints > 0
 export default function CameraCapture({ onCapture, t }) {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
-  const [cameraActive, setCameraActive] = useState(isMobile) // mobile: auto-start
+  const [cameraActive, setCameraActive] = useState(false) // always show choice screen first
   const [error, setError] = useState(null)
 
   useEffect(() => {
