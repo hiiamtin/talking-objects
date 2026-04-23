@@ -31,3 +31,6 @@ dist-ssr
 
 # Test images
 test-image/
+
+# Cloudflare Worker local secrets
+worker/.dev.vars
