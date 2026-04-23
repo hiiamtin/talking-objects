@@ -3,13 +3,13 @@ import { buildPrompt } from './gemini'
 describe('buildPrompt', () => {
   it('Thai prompt contains Thai mood description', () => {
     const prompt = buildPrompt('ตลก', 'th')
-    expect(prompt).toContain('ตลก ขำขัน มีมุก ร่าเริง')
+    expect(prompt).toContain('punchline')
     expect(prompt).toContain('ภาษาไทย')
   })
 
   it('English prompt contains English mood description', () => {
     const prompt = buildPrompt('ตลก', 'en')
-    expect(prompt).toContain('funny, witty, playful')
+    expect(prompt).toContain('punchlines and unexpected twists')
     expect(prompt).toContain('English only')
   })
 

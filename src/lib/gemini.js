@@ -1,12 +1,12 @@
 const MOOD_MAP_TH = {
-  'ตลก':    'ตลก ขำขัน มีมุก ร่าเริง',
+  'ตลก':    'เล่นมุกกวนๆ มี punchline พลิก expectation ตลกแบบ stand-up ไม่แดกไม่บูลลี่ ขำแบบทุกคนขำด้วยกัน',
   'จิกกัด': 'เผา roast แรงๆ แซวหนักมือ ไม่ยั้ง แต่ยังตลกอยู่ ห้ามหยาบคาย',
   'น่ารัก': 'น่ารัก อ้อน งอน เหมือนสัตว์เลี้ยง',
   'จริงจัง': 'จริงจัง มีสาระ แต่ยังอบอุ่น',
 }
 
 const MOOD_MAP_EN = {
-  'ตลก':    'funny, witty, playful',
+  'ตลก':    'playful comedian with punchlines and unexpected twists, light-hearted banter — everyone laughs together, never at anyone',
   'จิกกัด': 'savage roast, brutally honest, no holding back — still funny not mean',
   'น่ารัก': 'cute, whiny, like a pet',
   'จริงจัง': 'sincere, thoughtful but still warm',
