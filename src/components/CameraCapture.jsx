@@ -5,7 +5,7 @@ const isMobile = navigator.maxTouchPoints > 0
 
 export default function CameraCapture({ onCapture }) {
   const videoRef = useRef(null)
-  const [stream, setStream] = useState(null)
+  const streamRef = useRef(null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
@@ -13,11 +13,11 @@ export default function CameraCapture({ onCapture }) {
     navigator.mediaDevices
       .getUserMedia({ video: { facingMode: 'environment' } })
       .then(s => {
-        setStream(s)
+        streamRef.current = s
         if (videoRef.current) videoRef.current.srcObject = s
       })
       .catch(() => setError('camera_denied'))
-    return () => stream?.getTracks().forEach(t => t.stop())
+    return () => streamRef.current?.getTracks().forEach(t => t.stop())
   }, [])
 
   async function handleSnapshot() {

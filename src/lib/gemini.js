@@ -48,5 +48,7 @@ export async function generateObjectVoice(base64Image, mood, lang) {
   })
   if (!res.ok) throw new Error(`Gemini API error: ${res.status}`)
   const data = await res.json()
-  return data.candidates[0].content.parts[0].text.trim()
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+  if (!text) throw new Error('No content from Gemini')
+  return text.trim()
 }
