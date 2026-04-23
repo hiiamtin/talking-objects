@@ -51,8 +51,10 @@ export default function App() {
   const [lang, setLang]         = useState('th')
   const [speech, setSpeech]     = useState('')
   const [error, setError]       = useState(null)
-  const [tailDir, setTailDir]   = useState('bottom')
-  const [bubbleBg, setBubbleBg] = useState('white')
+  const [tailDir, setTailDir]     = useState('auto')
+  const [bubbleBg, setBubbleBg]   = useState('white')
+  const [fontSize, setFontSize]   = useState('md')
+  const [fontColor, setFontColor] = useState(null)
   const stageRef                = useRef(null)
   const bubbleRef               = useRef(null)
   const t = UI[lang]
@@ -126,12 +128,14 @@ export default function App() {
             bubbleRef={bubbleRef}
             tailDir={tailDir}
             bubbleBg={bubbleBg}
+            fontSize={fontSize}
+            fontColor={fontColor}
           />
           <BubbleStyleBar
-            tailDir={tailDir}
-            onTailDir={setTailDir}
-            bubbleBg={bubbleBg}
-            onBubbleBg={setBubbleBg}
+            tailDir={tailDir}   onTailDir={setTailDir}
+            bubbleBg={bubbleBg} onBubbleBg={setBubbleBg}
+            fontSize={fontSize} onFontSize={setFontSize}
+            fontColor={fontColor} onFontColor={setFontColor}
           />
           <ShareBar
             stageRef={stageRef}
