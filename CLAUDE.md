@@ -92,52 +92,56 @@ Areas outside the photo remain transparent (alpha = 0).
 
 ## Architecture — Cloudflare Worker Proxy
 
-API key lives in Cloudflare Worker secret (not in frontend bundle). Frontend calls Worker, Worker calls Gemini.
+Two paths depending on environment:
 
 ```
-Browser → POST /  (prompt + base64 image)
-        → worker/index.js (Cloudflare Worker)
-        → Gemini API  (GEMINI_API_KEY secret, never exposed)
-        → response back to browser
+[Local dev]
+Browser → Gemini API directly  (VITE_GEMINI_API_KEY set → browser uses OS cert store, no SSL issues)
+
+[Production]
+Browser → worker/index.js (Cloudflare Worker) → Gemini API
+         VITE_WORKER_URL                        GEMINI_API_KEY secret, never exposed
 ```
 
 **Worker files:**
-- `worker/index.js` — proxy handler, CORS whitelist, calls Gemini
+- `worker/index.js` — proxy handler, CORS via `ALLOWED_ORIGINS` env var, calls Gemini
 - `worker/wrangler.toml` — worker name, `GEMINI_MODEL` var
-- `worker/.dev.vars` — local secrets (gitignored), needs `GEMINI_API_KEY=...`
+- `worker/.dev.vars` — local secrets (gitignored), template at `worker/.dev.vars.example`
+
+**Why two paths:** wrangler local dev uses Node.js fetch → corporate proxy SSL cert not trusted → fetch to Gemini fails. Browser fetch uses OS cert store which trusts corporate CAs → works fine.
 
 ## Environment
 
 ```bash
-# .env (never commit) — frontend only
-VITE_WORKER_URL=https://your-worker.workers.dev
-# For local dev: VITE_WORKER_URL=http://localhost:8787
+# .env — local dev (never commit)
+VITE_GEMINI_API_KEY=your_key   # browser calls Gemini directly; VITE_WORKER_URL ignored
+VITE_WORKER_URL=http://localhost:8787   # unused when GEMINI_API_KEY is set
+
+# .env — production build (VITE_GEMINI_API_KEY must NOT be set)
+VITE_WORKER_URL=https://talking-objects-api.workers.dev
 ```
+
+Logic in `src/lib/gemini.js`: if `VITE_GEMINI_API_KEY` is set → direct path, else → Worker path.
 
 ## Local Development
 
-Requires 2 processes:
-
 ```bash
-# Terminal 1 — Worker
-cd worker
-echo "GEMINI_API_KEY=your_key" > .dev.vars
-npx wrangler dev   # → http://localhost:8787
-
-# Terminal 2 — Frontend
-VITE_WORKER_URL=http://localhost:8787  # in .env
-npm run dev        # → http://localhost:5173
+cp .env.example .env
+# Set VITE_GEMINI_API_KEY in .env
+npm run dev   # single process, no wrangler needed
 ```
 
 ## Deployment
 
 ```bash
-# 1. Deploy Worker first
+# 1. Deploy Worker (once)
 cd worker
 npx wrangler secret put GEMINI_API_KEY
-npx wrangler deploy   # → https://talking-objects-api.workers.dev
+npx wrangler secret put ALLOWED_ORIGINS   # comma-separated allowed origins
+npx wrangler deploy
 
-# 2. Deploy Frontend (Cloudflare Pages)
-# Build command: npm run build | Output: dist
+# 2. Deploy Frontend — Cloudflare Pages
+# Build: npm run build | Output: dist
 # Env var: VITE_WORKER_URL=https://talking-objects-api.workers.dev
+# Do NOT set VITE_GEMINI_API_KEY in production
 ```
