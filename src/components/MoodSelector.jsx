@@ -2,7 +2,7 @@ import React from 'react'
 
 const MOODS = ['ตลก', 'จิกกัด', 'น่ารัก', 'จริงจัง']
 
-export default function MoodSelector({ mood, onMoodChange }) {
+export default function MoodSelector({ mood, onMoodChange, moodLabels }) {
   return (
     <div className="mood-selector">
       {MOODS.map(m => (
@@ -11,7 +11,7 @@ export default function MoodSelector({ mood, onMoodChange }) {
           className={`mood-btn ${mood === m ? 'active' : ''}`}
           onClick={() => onMoodChange(m)}
         >
-          {m}
+          {moodLabels?.[m] ?? m}
         </button>
       ))}
     </div>

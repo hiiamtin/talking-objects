@@ -23,6 +23,7 @@ const UI = {
     cancel:     'ยกเลิก',
     or:         'หรือ',
     noCam:      'ไม่มีสิทธิ์กล้อง — อัพโหลดรูปได้เลย',
+    moods:      { 'ตลก': 'ตลก', 'จิกกัด': 'จิกกัด', 'น่ารัก': 'น่ารัก', 'จริงจัง': 'จริงจัง' },
   },
   en: {
     title:      '🗯️ I want to say',
@@ -38,6 +39,7 @@ const UI = {
     cancel:     'Cancel',
     or:         'or',
     noCam:      'No camera access — upload instead',
+    moods:      { 'ตลก': 'Funny', 'จิกกัด': 'Sarcastic', 'น่ารัก': 'Cute', 'จริงจัง': 'Serious' },
   },
 }
 
@@ -87,7 +89,7 @@ export default function App() {
 
       {appState === 'idle' && (
         <div className="idle-screen">
-          <MoodSelector mood={mood} onMoodChange={setMood} />
+          <MoodSelector mood={mood} onMoodChange={setMood} moodLabels={t.moods} />
           <CameraCapture onCapture={handleCapture} t={t} />
         </div>
       )}
@@ -95,7 +97,7 @@ export default function App() {
       {appState === 'captured' && (
         <div className="captured-screen">
           <img src={`data:image/jpeg;base64,${image}`} className="preview-img" alt="preview" />
-          <MoodSelector mood={mood} onMoodChange={setMood} />
+          <MoodSelector mood={mood} onMoodChange={setMood} moodLabels={t.moods} />
           {error && <p className="toast-error">{error}</p>}
           <div className="action-row">
             <button className="btn-primary" onClick={handleGenerate}>{t.generate}</button>
