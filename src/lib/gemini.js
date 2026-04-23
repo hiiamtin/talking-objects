@@ -41,24 +41,18 @@ function stripObjectLabel(text) {
     .trim()
 }
 
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent`
+const WORKER_URL = import.meta.env.VITE_WORKER_URL
 
 export async function generateObjectVoice(base64Image, mood, lang) {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY
-  const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const res = await fetch(WORKER_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      contents: [{
-        parts: [
-          { text: buildPrompt(mood, lang) },
-          { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
-        ],
-      }],
-      generationConfig: { maxOutputTokens: 150, temperature: 0.9 },
+      prompt: buildPrompt(mood, lang),
+      image: base64Image,
     }),
   })
-  if (!res.ok) throw new Error(`Gemini API error: ${res.status}`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
   const data = await res.json()
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text
   if (!text) throw new Error('No content from Gemini')

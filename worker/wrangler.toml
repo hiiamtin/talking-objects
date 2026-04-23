@@ -1,0 +1,6 @@
+name = "talking-objects-api"
+main = "index.js"
+compatibility_date = "2026-04-23"
+
+[vars]
+GEMINI_MODEL = "gemini-3.1-flash-lite-preview"
