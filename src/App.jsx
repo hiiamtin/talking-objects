@@ -24,6 +24,8 @@ const UI = {
     cancel:     'ยกเลิก',
     or:         'หรือ',
     noCam:      'ไม่มีสิทธิ์กล้อง — อัพโหลดรูปได้เลย',
+    flipFront:  'กล้องหน้า',
+    flipBack:   'กล้องหลัง',
     moods:      { 'ตลก': 'ตลก', 'จิกกัด': 'จิกกัด', 'น่ารัก': 'น่ารัก', 'จริงจัง': 'จริงจัง' },
   },
   en: {
@@ -40,6 +42,8 @@ const UI = {
     cancel:     'Cancel',
     or:         'or',
     noCam:      'No camera access — upload instead',
+    flipFront:  'Front cam',
+    flipBack:   'Back cam',
     moods:      { 'ตลก': 'Funny', 'จิกกัด': 'Sarcastic', 'น่ารัก': 'Cute', 'จริงจัง': 'Serious' },
   },
 }
