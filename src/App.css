@@ -280,11 +280,4 @@ body {
   color: #111;
 }
 
-.bubble-tail {
-  width: 0;
-  height: 0;
-  border-left: 10px solid transparent;
-  border-right: 10px solid transparent;
-  border-top: 14px solid #222;
-  margin-left: 24px;
-}
+/* .bubble-tail removed — replaced by dynamic SVG in SpeechBubble.jsx */
