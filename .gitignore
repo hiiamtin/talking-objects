@@ -35,3 +35,4 @@ test-image/
 # Cloudflare Worker local secrets
 worker/.dev.vars
 .dev.vars
+worker/.wrangler
