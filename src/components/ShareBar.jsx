@@ -1,7 +1,5 @@
 import html2canvas from 'html2canvas'
 
-const TAIL = 16 // tail SVG max size — expand capture area to include it
-
 export default function ShareBar({ stageRef, bubbleRef, imageBase64, onRegenerate, onReset, t }) {
   async function handleDownload() {
     const stage = stageRef.current
@@ -11,17 +9,11 @@ export default function ShareBar({ stageRef, bubbleRef, imageBase64, onRegenerat
     const stageRect = stage.getBoundingClientRect()
     const bubbleRect = bubble.getBoundingClientRect()
 
-    // Expand bubble bounds to include absolute-positioned SVG tail
-    const bLeft  = bubbleRect.left  - TAIL
-    const bTop   = bubbleRect.top   - TAIL
-    const bRight = bubbleRect.right + TAIL
-    const bBot   = bubbleRect.bottom + TAIL
-
-    // Union bounding box: image area ∪ bubble+tail area
-    const minX = Math.min(stageRect.left,  bLeft)
-    const minY = Math.min(stageRect.top,   bTop)
-    const maxX = Math.max(stageRect.right, bRight)
-    const maxY = Math.max(stageRect.bottom, bBot)
+    // Union: image area ∪ bubble area (bubble includes tail via margin padding)
+    const minX = Math.min(stageRect.left,   bubbleRect.left)
+    const minY = Math.min(stageRect.top,    bubbleRect.top)
+    const maxX = Math.max(stageRect.right,  bubbleRect.right)
+    const maxY = Math.max(stageRect.bottom, bubbleRect.bottom)
     const W = maxX - minX
     const H = maxY - minY
 
@@ -32,7 +24,7 @@ export default function ShareBar({ stageRef, bubbleRef, imageBase64, onRegenerat
     const ctx = canvas.getContext('2d')
     ctx.scale(dpr, dpr)
 
-    // Draw photo (only covers image area — outside stays transparent)
+    // Draw photo (transparent outside image area)
     const photoImg = new Image()
     photoImg.src = `data:image/jpeg;base64,${imageBase64}`
     await new Promise(r => { photoImg.onload = r })
@@ -43,23 +35,17 @@ export default function ShareBar({ stageRef, bubbleRef, imageBase64, onRegenerat
       stageRect.height,
     )
 
-    // Capture bubble with expanded clip to include tail overflow
+    // Capture bubble wrapper — now contains tail inside its bounds
     const bubbleCanvas = await html2canvas(bubble, {
       backgroundColor: null,
       scale: dpr,
       logging: false,
-      x: -TAIL,           // start TAIL px to the left of element
-      y: -TAIL,           // start TAIL px above element
-      width:  bubble.offsetWidth  + TAIL * 2,
-      height: bubble.offsetHeight + TAIL * 2,
     })
-
-    // Draw at expanded position (offset by -TAIL since we captured extra area)
     ctx.drawImage(bubbleCanvas,
-      bubbleRect.left - minX - TAIL,
-      bubbleRect.top  - minY - TAIL,
-      bubbleRect.width  + TAIL * 2,
-      bubbleRect.height + TAIL * 2,
+      bubbleRect.left - minX,
+      bubbleRect.top  - minY,
+      bubbleRect.width,
+      bubbleRect.height,
     )
 
     canvas.toBlob(blob => {

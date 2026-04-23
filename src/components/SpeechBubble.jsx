@@ -8,52 +8,48 @@ const BG_CONFIG = {
 
 const FONT_SIZES = { sm: '0.72rem', md: '0.9rem', lg: '1.15rem', xl: '1.5rem' }
 
-// Tail as absolutely-positioned SVG outside the comic-bubble box
+// Tail SVG positioned INSIDE bubble-wrapper (positive offset values = within wrapper bounds)
+// comic-bubble has margin:16px → tail sits at 2px from wrapper edge (16-14=2)
 function Tail({ dir, fill, stroke }) {
   const p = { fill, stroke, strokeWidth: '2.5', strokeLinejoin: 'round' }
   const base = { position: 'absolute', pointerEvents: 'none', display: 'block' }
 
   if (dir === 'bottom') return (
     <svg width="20" height="14"
-      style={{ ...base, bottom: -13, left: '50%', transform: 'translateX(-50%)' }}>
+      style={{ ...base, bottom: 2, left: '50%', transform: 'translateX(-50%)' }}>
       <polygon points="0,0 20,0 10,14" {...p} />
     </svg>
   )
   if (dir === 'top') return (
     <svg width="20" height="14"
-      style={{ ...base, top: -13, left: '50%', transform: 'translateX(-50%)' }}>
+      style={{ ...base, top: 2, left: '50%', transform: 'translateX(-50%)' }}>
       <polygon points="0,14 20,14 10,0" {...p} />
     </svg>
   )
   if (dir === 'left') return (
     <svg width="14" height="20"
-      style={{ ...base, left: -13, top: '50%', transform: 'translateY(-50%)' }}>
+      style={{ ...base, left: 2, top: '50%', transform: 'translateY(-50%)' }}>
       <polygon points="14,0 14,20 0,10" {...p} />
     </svg>
   )
   if (dir === 'right') return (
     <svg width="14" height="20"
-      style={{ ...base, right: -13, top: '50%', transform: 'translateY(-50%)' }}>
+      style={{ ...base, right: 2, top: '50%', transform: 'translateY(-50%)' }}>
       <polygon points="0,0 0,20 14,10" {...p} />
     </svg>
   )
   return null
 }
 
-// Compute which direction tail should point for "auto" mode
 function computeAutoDir(pos, containerRef, bubbleRef) {
   const stage = containerRef?.current
   const bubble = bubbleRef?.current
   if (!stage || !bubble) return 'bottom'
-
   const sw = stage.offsetWidth
   const sh = stage.offsetHeight
   const bh = bubble.offsetHeight || 60
-
-  // Vector from bubble center → image center
-  const dx = -pos.x                             // >0 = image is RIGHT of bubble
-  const dy = sh / 2 - (16 + pos.y + bh / 2)    // >0 = image is BELOW bubble
-
+  const dx = -pos.x
+  const dy = sh / 2 - (16 + pos.y + bh / 2)
   return Math.abs(dx) > Math.abs(dy)
     ? (dx > 0 ? 'right' : 'left')
     : (dy > 0 ? 'bottom' : 'top')
@@ -94,6 +90,10 @@ export default function SpeechBubble({
     <div className="bubble-stage" ref={containerRef}>
       <img src={`data:image/jpeg;base64,${image}`} className="stage-image" alt="captured" />
 
+      {/*
+        bubble-wrapper = capture target (bubbleRef)
+        Width/height includes comic-bubble margins → tail SVG fits inside → html2canvas captures tail too
+      */}
       <div
         ref={bubbleRef}
         className="bubble-wrapper"
@@ -102,14 +102,20 @@ export default function SpeechBubble({
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
       >
+        {/* margin:16px creates space for tail inside wrapper bounds */}
         <div
           className="comic-bubble"
-          style={{ background: cfg.bg, borderColor: cfg.border }}
+          style={{
+            margin: '16px',
+            background: cfg.bg,
+            borderColor: cfg.border,
+          }}
         >
           <p className="bubble-text" style={{ color: textColor, fontSize: FONT_SIZES[fontSize] }}>
             {speech}
           </p>
         </div>
+
         <Tail dir={effectiveDir} fill={cfg.tailFill} stroke={cfg.tailStroke} />
       </div>
     </div>
