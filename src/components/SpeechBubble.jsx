@@ -97,7 +97,7 @@ export default function SpeechBubble({
       <div
         ref={bubbleRef}
         className="bubble-wrapper"
-        style={{ transform: `translate(calc(-50% + ${pos.x}px), ${pos.y}px)`, position: 'relative' }}
+        style={{ transform: `translate(calc(-50% + ${pos.x}px), ${pos.y}px)` }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
