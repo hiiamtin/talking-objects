@@ -1,11 +1,20 @@
-name: Deploy
+name: Deploy Pages
 
 on:
   push:
     branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.js'
+      - 'eslint.config.js'
+      - '.github/workflows/deploy-pages.yml'
 
 jobs:
-  deploy-pages:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,16 +31,6 @@ jobs:
           VITE_WORKER_URL: ${{ secrets.VITE_WORKER_URL }}
 
       - run: npx wrangler pages deploy dist --project-name talking-objects --branch main
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-
-  deploy-worker:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - run: npx wrangler deploy worker/index.js --name talking-objects-api
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
