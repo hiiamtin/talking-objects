@@ -14,13 +14,13 @@ describe('buildPrompt', () => {
   })
 
   it('Thai prompt contains all 4 moods correctly', () => {
-    expect(buildPrompt('จิกกัด', 'th')).toContain('เสียดสีเบาๆ')
+    expect(buildPrompt('จิกกัด', 'th')).toContain('roast แรงๆ')
     expect(buildPrompt('น่ารัก', 'th')).toContain('อ้อน งอน')
     expect(buildPrompt('จริงจัง', 'th')).toContain('มีสาระ')
   })
 
   it('English prompt contains all 4 moods correctly', () => {
-    expect(buildPrompt('จิกกัด', 'en')).toContain('lightly sarcastic')
+    expect(buildPrompt('จิกกัด', 'en')).toContain('savage roast')
     expect(buildPrompt('น่ารัก', 'en')).toContain('cute, whiny')
     expect(buildPrompt('จริงจัง', 'en')).toContain('sincere, thoughtful')
   })
