@@ -14,22 +14,31 @@ const MOOD_MAP_EN = {
 
 export function buildPrompt(mood, lang) {
   if (lang === 'th') {
-    return `ดูภาพนี้แล้วระบุว่า object หลักคืออะไร จากนั้นสวมบทบาทเป็นมัน 100%
-ห้ามสวมบทบาทเป็นคนในภาพ — ให้เป็นสิ่งของ วัตถุ หรือธรรมชาติ เท่านั้น
-คุณ *คือ* สิ่งนั้น — มีจิตสำนึก รู้สึกได้ เห็นรอบข้างได้
-พูดจากมุมมองของตัวเอง: อ้างอิงสภาพ สถานการณ์ หรือสิ่งที่เห็นในรูปนี้โดยตรง
-ดึงความรู้เกี่ยวกับธรรมชาติ หน้าที่ และชีวิตประจำวันของตัวเองออกมาพูด
+    return `ดูภาพนี้ในใจ แล้วสวมบทบาทเป็น object หลัก (ไม่ใช่คน) ทันที
+ห้ามเขียนชื่อตัวเอง ห้ามขึ้นต้นด้วย "Object:", "ฉันคือ...", หรือการแนะนำตัวใดๆ
+พูดออกมาเลย — เหมือนมันเริ่มพูดกลางคัน รู้สึกได้ เห็นรอบข้างได้
+อ้างอิงสภาพและสถานการณ์จริงในรูปนี้ ดึงธรรมชาติ/หน้าที่/ชีวิตของตัวเองมาพูด
 tone: ${MOOD_MAP_TH[mood]}
 ห้ามเศร้า ห้ามพูดถึงความตาย ตอบเป็นภาษาไทยเท่านั้น
 2-3 ประโยคสั้นๆ ห้ามขึ้นต้นทุกประโยคด้วย "ฉัน"`
   }
-  return `Look at this image, identify the main object (not a person), then fully embody it.
-You ARE that specific object — conscious, feeling, aware of everything around you.
-Speak from its actual point of view: reference the exact condition and situation visible in this image.
-Draw on its real nature, purpose, daily life, and frustrations as that type of object.
+  return `Look at this image silently, identify the main object (not a person), then immediately speak AS it.
+Do NOT write its name, do NOT start with "I am a...", "Object:", or any self-introduction.
+Jump straight into speaking — mid-thought, like it's already talking.
+Reference the real situation visible in this image. Draw on its nature, purpose, and daily life.
 Tone: ${MOOD_MAP_EN[mood]}
 No sadness, no death. Reply in English only, 2-3 short punchy sentences.
-Vary your sentence starters — don't begin every sentence with "I".`
+Vary sentence starters — don't begin every sentence with "I".`
+}
+
+// Strip leading object-identification lines the AI sometimes outputs despite the prompt
+// e.g. "Object หลัก: รถจักรยานยนต์\n..." or "ฉันคือ: ต้นไม้\n..."
+function stripObjectLabel(text) {
+  return text
+    .replace(/^(object\s*(หลัก)?\s*:\s*[^\n]+\n?)/i, '')
+    .replace(/^(ฉันคือ[^\n]*\n?)/i, '')
+    .replace(/^(i am a?n?\s+[^\n.!?]+[.\n])/i, '')
+    .trim()
 }
 
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent`
@@ -53,5 +62,5 @@ export async function generateObjectVoice(base64Image, mood, lang) {
   const data = await res.json()
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text
   if (!text) throw new Error('No content from Gemini')
-  return text.trim()
+  return stripObjectLabel(text.trim())
 }
