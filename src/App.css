@@ -215,6 +215,42 @@ body {
   font-size: 1rem;
 }
 
+/* Bubble style bar */
+.bubble-style-bar {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.style-group {
+  display: flex;
+  gap: 0.25rem;
+  border: 2px solid #333;
+  border-radius: 10px;
+  padding: 0.2rem;
+}
+
+.style-btn {
+  padding: 0.3rem 0.6rem;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: inherit;
+}
+.style-btn:hover { background: #eee; }
+.style-btn.active { background: #333; color: white; }
+
+.style-divider {
+  width: 1px;
+  height: 1.5rem;
+  background: #ddd;
+}
+
 /* Share bar */
 .share-bar {
   display: flex;
@@ -241,6 +277,7 @@ body {
   width: 100%;
   max-width: 480px;
   user-select: none;
+  overflow: visible;
 }
 
 .stage-image {

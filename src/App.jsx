@@ -4,6 +4,7 @@ import CameraCapture from './components/CameraCapture'
 import MoodSelector from './components/MoodSelector'
 import LangToggle from './components/LangToggle'
 import SpeechBubble from './components/SpeechBubble'
+import BubbleStyleBar from './components/BubbleStyleBar'
 import ShareBar from './components/ShareBar'
 import { generateObjectVoice } from './lib/gemini'
 import './App.css'
@@ -50,7 +51,10 @@ export default function App() {
   const [lang, setLang]         = useState('th')
   const [speech, setSpeech]     = useState('')
   const [error, setError]       = useState(null)
+  const [tailDir, setTailDir]   = useState('bottom')
+  const [bubbleBg, setBubbleBg] = useState('white')
   const stageRef                = useRef(null)
+  const bubbleRef               = useRef(null)
   const t = UI[lang]
 
   function handleCapture(base64) {
@@ -115,9 +119,24 @@ export default function App() {
 
       {appState === 'result' && (
         <div className="result-screen">
-          <SpeechBubble image={image} speech={speech} containerRef={stageRef} />
+          <SpeechBubble
+            image={image}
+            speech={speech}
+            containerRef={stageRef}
+            bubbleRef={bubbleRef}
+            tailDir={tailDir}
+            bubbleBg={bubbleBg}
+          />
+          <BubbleStyleBar
+            tailDir={tailDir}
+            onTailDir={setTailDir}
+            bubbleBg={bubbleBg}
+            onBubbleBg={setBubbleBg}
+          />
           <ShareBar
             stageRef={stageRef}
+            bubbleRef={bubbleRef}
+            imageBase64={image}
             onRegenerate={handleGenerate}
             onReset={handleReset}
             t={t}
