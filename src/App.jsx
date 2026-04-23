@@ -145,6 +145,8 @@ export default function App() {
             stageRef={stageRef}
             bubbleRef={bubbleRef}
             imageBase64={image}
+            tailDir={tailDir}
+            bubbleBg={bubbleBg}
             onRegenerate={handleGenerate}
             onReset={handleReset}
             t={t}
