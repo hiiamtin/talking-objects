@@ -74,6 +74,18 @@ body {
   border: 2.5px solid #222;
 }
 
+.camera-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.divider-text {
+  color: #aaa;
+  font-size: 0.85rem;
+  margin: 0.25rem 0;
+}
+
 .upload-container {
   display: flex;
   flex-direction: column;

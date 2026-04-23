@@ -6,19 +6,26 @@ const isMobile = navigator.maxTouchPoints > 0
 export default function CameraCapture({ onCapture }) {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
+  const [cameraActive, setCameraActive] = useState(isMobile) // mobile: auto-start
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (!isMobile) return
+    if (!cameraActive) return
     navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: 'environment' } })
+      .getUserMedia({ video: { facingMode: isMobile ? 'environment' : 'user' } })
       .then(s => {
         streamRef.current = s
         if (videoRef.current) videoRef.current.srcObject = s
       })
-      .catch(() => setError('camera_denied'))
-    return () => streamRef.current?.getTracks().forEach(t => t.stop())
-  }, [])
+      .catch(() => {
+        setError('camera_denied')
+        setCameraActive(false)
+      })
+    return () => {
+      streamRef.current?.getTracks().forEach(t => t.stop())
+      streamRef.current = null
+    }
+  }, [cameraActive])
 
   async function handleSnapshot() {
     const video = videoRef.current
@@ -29,6 +36,10 @@ export default function CameraCapture({ onCapture }) {
     canvas.toBlob(async blob => {
       const file = new File([blob], 'snap.jpg', { type: 'image/jpeg' })
       const base64 = await resizeImage(file, 1024, 0.8)
+      // stop camera after snapshot
+      streamRef.current?.getTracks().forEach(t => t.stop())
+      streamRef.current = null
+      setCameraActive(false)
       onCapture(base64)
     }, 'image/jpeg')
   }
@@ -40,22 +51,29 @@ export default function CameraCapture({ onCapture }) {
     onCapture(base64)
   }
 
-  // Mobile: show camera feed
-  if (isMobile && !error) {
+  // Camera feed active
+  if (cameraActive) {
     return (
       <div className="camera-container">
         <video ref={videoRef} autoPlay playsInline className="camera-feed" />
-        <button className="capture-btn" onClick={handleSnapshot}>📸 ถ่าย</button>
+        <div className="camera-actions">
+          <button className="capture-btn" onClick={handleSnapshot}>📸 ถ่าย</button>
+          <button className="btn-ghost" onClick={() => setCameraActive(false)}>ยกเลิก</button>
+        </div>
       </div>
     )
   }
 
-  // Desktop or camera denied: show file upload
+  // Idle: show options
   return (
     <div className="upload-container">
       {error && <p className="error-hint">ไม่มีสิทธิ์กล้อง — อัพโหลดรูปได้เลย</p>}
+      <button className="btn-primary" onClick={() => { setError(null); setCameraActive(true) }}>
+        📷 เปิดกล้อง
+      </button>
+      <div className="divider-text">หรือ</div>
       <label className="upload-label">
-        <span>📁 เลือกรูป</span>
+        <span>📁 เลือกรูปจากเครื่อง</span>
         <input type="file" accept="image/*" onChange={handleFileChange} hidden />
       </label>
     </div>
