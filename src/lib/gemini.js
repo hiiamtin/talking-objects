@@ -41,16 +41,38 @@ function stripObjectLabel(text) {
     .trim()
 }
 
-const WORKER_URL = import.meta.env.VITE_WORKER_URL
+const WORKER_URL    = import.meta.env.VITE_WORKER_URL
+const GEMINI_KEY    = import.meta.env.VITE_GEMINI_API_KEY
+const GEMINI_DIRECT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent`
 
 export async function generateObjectVoice(base64Image, mood, lang) {
+  // Dev fallback: if VITE_GEMINI_API_KEY is set, call Gemini directly from browser.
+  // Browser uses OS cert store → corporate proxy SSL works fine.
+  // Production: VITE_GEMINI_API_KEY is unset → routes through Worker proxy (key hidden server-side).
+  if (GEMINI_KEY) {
+    const res = await fetch(`${GEMINI_DIRECT}?key=${GEMINI_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [
+          { text: buildPrompt(mood, lang) },
+          { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
+        ]}],
+        generationConfig: { maxOutputTokens: 150, temperature: 0.9 },
+      }),
+    })
+    if (!res.ok) throw new Error(`Gemini API error: ${res.status}`)
+    const data = await res.json()
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+    if (!text) throw new Error('No content from Gemini')
+    return stripObjectLabel(text.trim())
+  }
+
+  // Production path: call Worker proxy
   const res = await fetch(WORKER_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      prompt: buildPrompt(mood, lang),
-      image: base64Image,
-    }),
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt: buildPrompt(mood, lang), image: base64Image }),
   })
   if (!res.ok) throw new Error(`API error: ${res.status}`)
   const data = await res.json()
