@@ -28,3 +28,6 @@ dist-ssr
 
 # Superpowers
 .superpowers/
+
+# Test images
+test-image/
