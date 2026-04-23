@@ -4,54 +4,107 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Talking Objects** — hackathon project (social impact theme). User takes/uploads photo, AI generates funny first-person voice of the object in the image. Tone: จิกกัด, ตลก, อบอุ่น (witty, light roast, warm). Not sad/heavy.
+**Talking Objects** — hackathon web app (social impact theme). User takes/uploads photo → Gemini AI generates witty first-person voice of the main object → comic speech bubble overlaid on photo → shareable PNG.
+
+Tone: ตลก, จิกกัด (roast), น่ารัก, จริงจัง — positive/funny, never sad or heavy.
 
 ## Tech Stack
 
-- **Frontend:** Vite + React
-- **AI:** Gemini 3.1 Flash Lite (vision + text generation) — free tier via Google AI Studio
-- **Language output:** Thai (primary)
+- **Frontend:** Vite + React (JavaScript)
+- **AI:** Gemini 3.1 Flash Lite Preview (`gemini-3.1-flash-lite-preview`) — free tier via Google AI Studio
+- **Export:** html2canvas — manual canvas composition for transparent-background PNG
+- **Testing:** vitest + @testing-library/react + jsdom
+- **Deploy:** Cloudflare Pages (`npm run build` → `dist/`)
 
 ## Dev Commands
 
 ```bash
-npm run dev      # start dev server
-npm run build    # production build
-npm run preview  # preview build
+npm run dev        # dev server at localhost:5173
+npm run build      # production build → dist/
+npm run test       # vitest watch mode
+npm run test:run   # vitest run once (CI)
+npm run lint       # eslint
 ```
 
 ## Architecture
 
+### State Machine (`App.jsx`)
+
 ```
-src/
-├── App.jsx              # root, manages camera/upload state
-├── components/
-│   ├── Camera.jsx       # browser camera capture → base64
-│   ├── ImageUpload.jsx  # file upload fallback
-│   ├── SpeechBubble.jsx # displays object's generated voice
-│   └── ShareButton.jsx  # share/download image with bubble overlay
-├── lib/
-│   └── gemini.js        # Gemini API client, prompt builder
-└── main.jsx
+idle → captured → generating → result
+         ↑                        |
+         └── reset ───────────────┘
 ```
 
-## Gemini Integration
+State vars: `appState` | `image` (base64) | `mood` | `lang` | `speech` | `error` | `tailDir` | `bubbleBg` | `fontSize` | `fontColor`
 
-API key from `.env`:
-```
-VITE_GEMINI_API_KEY=your_key_here
-```
+Refs: `stageRef` (bubble-stage div for export) | `bubbleRef` (bubble wrapper for export)
 
-Prompt pattern for object voice:
-```
-วิเคราะห์ภาพนี้แล้วพูดในมุมมองของ [object หลักในภาพ]
-tone: ตลก จิกกัด แต่อบอุ่น ห้ามเศร้า
-จบด้วย encouragement เบาๆ
-ภาษาไทย, 2-3 ประโยค
-```
+### Components
+
+| File | Responsibility |
+|------|----------------|
+| `App.jsx` | State machine root, owns all state |
+| `CameraCapture.jsx` | Mobile/desktop camera toggle + file upload + resize |
+| `MoodSelector.jsx` | 4 mood pills, controlled, labels follow TH/EN |
+| `LangToggle.jsx` | TH/EN pill toggle |
+| `SpeechBubble.jsx` | Image + draggable comic bubble (absolute SVG tail) |
+| `BubbleStyleBar.jsx` | Tail direction, bg color, font size, font color pickers |
+| `ShareBar.jsx` | Download PNG, Regenerate, Reset — manual canvas export |
+
+### Libraries
+
+| File | Exports |
+|------|---------|
+| `src/lib/gemini.js` | `buildPrompt(mood, lang)`, `generateObjectVoice(base64, mood, lang)`, `stripObjectLabel(text)` |
+| `src/lib/imageUtils.js` | `resizeImage(file, maxPx, quality)`, `fileToBase64(file)` |
 
 ## Key Design Decisions
 
-- **Tone must stay positive/funny** — no sad/dark content, objects are witty friends not victims
-- **Share-ready output** — speech bubble overlaid on photo, exportable for social media
-- **Thai language first** — all generated text in Thai unless user switches
+### i18n
+All UI text lives in `UI` object in `App.jsx`. `t = UI[lang]` passed as prop to components. Mood labels also translate (TH: ตลก/จิกกัด/น่ารัก/จริงจัง, EN: Funny/Sarcastic/Cute/Serious). AI output language follows `lang` — completely separate prompt strings.
+
+### Camera
+`cameraActive` starts `false` on all devices — user always presses "เปิดกล้อง/Open camera" first. Mobile uses rear camera (`facingMode: 'environment'`), desktop uses front. Stream stored in `streamRef` (not state) to avoid stale closure bug in cleanup.
+
+### Speech Bubble
+- Positioned absolute within `.bubble-stage` (`top: 16px; left: 50%`)
+- Drag via Pointer Events — `setPointerCapture` handles touch-leave
+- `pos` state = translate offset from default position
+- Tail = SVG absolutely positioned outside `.comic-bubble` box (not flex layout)
+- `tailDir: 'auto'` computes effective direction by comparing bubble center vs image center each render
+- `bubbleBg` controls bubble fill + default text color; `fontColor` overrides text color independently
+
+### Export (ShareBar)
+Manual canvas composition — NOT simple `html2canvas(stageRef)`:
+1. `getBoundingClientRect()` on both stage and bubble
+2. Union bounding box covers both (bubble can be outside image)
+3. Draw photo at its offset on transparent canvas
+4. `html2canvas(bubbleRef, { backgroundColor: null })` captures bubble only
+5. Composite bubble onto canvas → PNG download
+
+Areas outside the photo remain transparent (alpha = 0).
+
+### Gemini Prompt
+- AI instructed to identify object internally but NOT output the name
+- `stripObjectLabel()` safety-strips any "Object หลัก: xxx" or "ฉันคือ: xxx" prefix the model still outputs
+- `temperature: 0.9`, `maxOutputTokens: 150`
+
+## Environment
+
+```bash
+# .env (never commit)
+VITE_GEMINI_API_KEY=your_google_ai_studio_key_here
+```
+
+`.env.example` is committed as reference. `VITE_` prefix = key is embedded in built JS bundle (visible in DevTools). Acceptable for hackathon; production needs a Cloudflare Worker proxy.
+
+## Deployment
+
+```bash
+npm run build
+npx wrangler pages deploy dist
+# Or connect GitHub repo to Cloudflare Pages dashboard
+# Build command: npm run build | Output: dist
+# Add VITE_GEMINI_API_KEY in Cloudflare Pages env vars
+```
