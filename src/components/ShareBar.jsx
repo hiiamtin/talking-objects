@@ -1,6 +1,6 @@
 import html2canvas from 'html2canvas'
 
-export default function ShareBar({ stageRef, onRegenerate, onReset }) {
+export default function ShareBar({ stageRef, onRegenerate, onReset, t }) {
   async function handleDownload() {
     const canvas = await html2canvas(stageRef.current, { useCORS: true })
     canvas.toBlob(blob => {
@@ -15,9 +15,9 @@ export default function ShareBar({ stageRef, onRegenerate, onReset }) {
 
   return (
     <div className="share-bar">
-      <button className="btn-primary" onClick={handleDownload}>💾 บันทึกรูป</button>
-      <button className="btn-secondary" onClick={onRegenerate}>🔄 พูดใหม่</button>
-      <button className="btn-ghost" onClick={onReset}>📷 ถ่ายใหม่</button>
+      <button className="btn-primary" onClick={handleDownload}>{t.save}</button>
+      <button className="btn-secondary" onClick={onRegenerate}>{t.regenerate}</button>
+      <button className="btn-ghost" onClick={onReset}>{t.retake}</button>
     </div>
   )
 }

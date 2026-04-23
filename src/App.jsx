@@ -8,14 +8,48 @@ import ShareBar from './components/ShareBar'
 import { generateObjectVoice } from './lib/gemini'
 import './App.css'
 
+const UI = {
+  th: {
+    title:      '🗯️ ฉันอยากบอกว่า',
+    generate:   '💬 คิดก่อนนะ!',
+    retake:     '↩ ถ่ายใหม่',
+    loading:    'กำลังคิดอยู่... 🤔',
+    error:      'ลองใหม่นะ 🙏',
+    save:       '💾 บันทึกรูป',
+    regenerate: '🔄 พูดใหม่',
+    openCamera: '📷 เปิดกล้อง',
+    uploadFile: '📁 เลือกรูปจากเครื่อง',
+    snapshot:   '📸 ถ่าย',
+    cancel:     'ยกเลิก',
+    or:         'หรือ',
+    noCam:      'ไม่มีสิทธิ์กล้อง — อัพโหลดรูปได้เลย',
+  },
+  en: {
+    title:      '🗯️ I want to say',
+    generate:   '💬 Let me think!',
+    retake:     '↩ Retake',
+    loading:    'Thinking... 🤔',
+    error:      'Try again 🙏',
+    save:       '💾 Save image',
+    regenerate: '🔄 Say again',
+    openCamera: '📷 Open camera',
+    uploadFile: '📁 Choose from device',
+    snapshot:   '📸 Snap',
+    cancel:     'Cancel',
+    or:         'or',
+    noCam:      'No camera access — upload instead',
+  },
+}
+
 export default function App() {
-  const [appState, setAppState] = useState('idle')   // idle|captured|generating|result
+  const [appState, setAppState] = useState('idle')
   const [image, setImage]       = useState(null)
   const [mood, setMood]         = useState('ตลก')
   const [lang, setLang]         = useState('th')
   const [speech, setSpeech]     = useState('')
   const [error, setError]       = useState(null)
   const stageRef                = useRef(null)
+  const t = UI[lang]
 
   function handleCapture(base64) {
     setImage(base64)
@@ -30,7 +64,7 @@ export default function App() {
       setSpeech(text)
       setAppState('result')
     } catch {
-      setError('ลองใหม่นะ 🙏')
+      setError(t.error)
       setAppState('captured')
     }
   }
@@ -45,42 +79,38 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1 className="app-title">🗯️ ของมันพูดได้</h1>
+        <h1 className="app-title">{t.title}</h1>
         {appState !== 'result' && (
           <LangToggle lang={lang} onLangChange={setLang} />
         )}
       </header>
 
-      {/* IDLE — camera / upload */}
       {appState === 'idle' && (
         <div className="idle-screen">
           <MoodSelector mood={mood} onMoodChange={setMood} />
-          <CameraCapture onCapture={handleCapture} />
+          <CameraCapture onCapture={handleCapture} t={t} />
         </div>
       )}
 
-      {/* CAPTURED — preview + generate */}
       {appState === 'captured' && (
         <div className="captured-screen">
           <img src={`data:image/jpeg;base64,${image}`} className="preview-img" alt="preview" />
           <MoodSelector mood={mood} onMoodChange={setMood} />
           {error && <p className="toast-error">{error}</p>}
           <div className="action-row">
-            <button className="btn-primary" onClick={handleGenerate}>💬 ให้ของพูด!</button>
-            <button className="btn-ghost" onClick={handleReset}>↩ ถ่ายใหม่</button>
+            <button className="btn-primary" onClick={handleGenerate}>{t.generate}</button>
+            <button className="btn-ghost" onClick={handleReset}>{t.retake}</button>
           </div>
         </div>
       )}
 
-      {/* GENERATING — loading */}
       {appState === 'generating' && (
         <div className="generating-screen">
           <img src={`data:image/jpeg;base64,${image}`} className="preview-img loading" alt="processing" />
-          <p className="loading-text">กำลังถามของว่าคิดอะไรอยู่... 🤔</p>
+          <p className="loading-text">{t.loading}</p>
         </div>
       )}
 
-      {/* RESULT — speech bubble + share */}
       {appState === 'result' && (
         <div className="result-screen">
           <SpeechBubble image={image} speech={speech} containerRef={stageRef} />
@@ -88,6 +118,7 @@ export default function App() {
             stageRef={stageRef}
             onRegenerate={handleGenerate}
             onReset={handleReset}
+            t={t}
           />
         </div>
       )}

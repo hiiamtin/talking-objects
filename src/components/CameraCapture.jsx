@@ -3,7 +3,7 @@ import { resizeImage } from '../lib/imageUtils'
 
 const isMobile = navigator.maxTouchPoints > 0
 
-export default function CameraCapture({ onCapture }) {
+export default function CameraCapture({ onCapture, t }) {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
   const [cameraActive, setCameraActive] = useState(isMobile) // mobile: auto-start
@@ -57,23 +57,22 @@ export default function CameraCapture({ onCapture }) {
       <div className="camera-container">
         <video ref={videoRef} autoPlay playsInline className="camera-feed" />
         <div className="camera-actions">
-          <button className="capture-btn" onClick={handleSnapshot}>📸 ถ่าย</button>
-          <button className="btn-ghost" onClick={() => setCameraActive(false)}>ยกเลิก</button>
+          <button className="capture-btn" onClick={handleSnapshot}>{t.snapshot}</button>
+          <button className="btn-ghost" onClick={() => setCameraActive(false)}>{t.cancel}</button>
         </div>
       </div>
     )
   }
 
-  // Idle: show options
   return (
     <div className="upload-container">
-      {error && <p className="error-hint">ไม่มีสิทธิ์กล้อง — อัพโหลดรูปได้เลย</p>}
+      {error && <p className="error-hint">{t.noCam}</p>}
       <button className="btn-primary" onClick={() => { setError(null); setCameraActive(true) }}>
-        📷 เปิดกล้อง
+        {t.openCamera}
       </button>
-      <div className="divider-text">หรือ</div>
+      <div className="divider-text">{t.or}</div>
       <label className="upload-label">
-        <span>📁 เลือกรูปจากเครื่อง</span>
+        <span>{t.uploadFile}</span>
         <input type="file" accept="image/*" onChange={handleFileChange} hidden />
       </label>
     </div>
