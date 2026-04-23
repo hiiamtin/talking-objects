@@ -90,21 +90,54 @@ Areas outside the photo remain transparent (alpha = 0).
 - `stripObjectLabel()` safety-strips any "Object หลัก: xxx" or "ฉันคือ: xxx" prefix the model still outputs
 - `temperature: 0.9`, `maxOutputTokens: 150`
 
+## Architecture — Cloudflare Worker Proxy
+
+API key lives in Cloudflare Worker secret (not in frontend bundle). Frontend calls Worker, Worker calls Gemini.
+
+```
+Browser → POST /  (prompt + base64 image)
+        → worker/index.js (Cloudflare Worker)
+        → Gemini API  (GEMINI_API_KEY secret, never exposed)
+        → response back to browser
+```
+
+**Worker files:**
+- `worker/index.js` — proxy handler, CORS whitelist, calls Gemini
+- `worker/wrangler.toml` — worker name, `GEMINI_MODEL` var
+- `worker/.dev.vars` — local secrets (gitignored), needs `GEMINI_API_KEY=...`
+
 ## Environment
 
 ```bash
-# .env (never commit)
-VITE_GEMINI_API_KEY=your_google_ai_studio_key_here
+# .env (never commit) — frontend only
+VITE_WORKER_URL=https://your-worker.workers.dev
+# For local dev: VITE_WORKER_URL=http://localhost:8787
 ```
 
-`.env.example` is committed as reference. `VITE_` prefix = key is embedded in built JS bundle (visible in DevTools). Acceptable for hackathon; production needs a Cloudflare Worker proxy.
+## Local Development
+
+Requires 2 processes:
+
+```bash
+# Terminal 1 — Worker
+cd worker
+echo "GEMINI_API_KEY=your_key" > .dev.vars
+npx wrangler dev   # → http://localhost:8787
+
+# Terminal 2 — Frontend
+VITE_WORKER_URL=http://localhost:8787  # in .env
+npm run dev        # → http://localhost:5173
+```
 
 ## Deployment
 
 ```bash
-npm run build
-npx wrangler pages deploy dist
-# Or connect GitHub repo to Cloudflare Pages dashboard
+# 1. Deploy Worker first
+cd worker
+npx wrangler secret put GEMINI_API_KEY
+npx wrangler deploy   # → https://talking-objects-api.workers.dev
+
+# 2. Deploy Frontend (Cloudflare Pages)
 # Build command: npm run build | Output: dist
-# Add VITE_GEMINI_API_KEY in Cloudflare Pages env vars
+# Env var: VITE_WORKER_URL=https://talking-objects-api.workers.dev
 ```

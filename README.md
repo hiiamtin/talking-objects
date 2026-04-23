@@ -10,7 +10,7 @@ Take a photo of any object → AI speaks as that object → get a shareable comi
 
 ## Features
 
-- 📷 ถ่ายรูปด้วยกล้อง หรืออัพโหลดรูปจากเครื่อง
+- 📷 ถ่ายรูปด้วยกล้อง (หน้า/หลัง) หรืออัพโหลดรูปจากเครื่อง
 - 🎭 4 โมด: ตลก / จิกกัด (roast) / น่ารัก / จริงจัง
 - 🇹🇭🇬🇧 รองรับภาษาไทยและอังกฤษ
 - 💬 ลาก speech bubble ไปไว้ตรงไหนก็ได้ในรูป
@@ -21,17 +21,40 @@ Take a photo of any object → AI speaks as that object → get a shareable comi
 
 - Vite + React
 - Gemini 3.1 Flash Lite Preview (Google AI Studio — free tier)
+- Cloudflare Worker (API proxy — API key อยู่ฝั่ง server)
 - html2canvas
 
 ## Run locally
 
+**ต้องรัน 2 process:**
+
+**1. Worker (API proxy):**
+```bash
+cd worker
+echo "GEMINI_API_KEY=your_key_here" > .dev.vars   # จาก aistudio.google.com
+npx wrangler dev                                    # รันที่ http://localhost:8787
+```
+
+**2. Frontend:**
 ```bash
 cp .env.example .env
-# เพิ่ม VITE_GEMINI_API_KEY จาก aistudio.google.com
+# แก้ .env: VITE_WORKER_URL=http://localhost:8787
 npm install
-npm run dev
+npm run dev                                         # รันที่ http://localhost:5173
 ```
+
+> **Shortcut:** ถ้า deploy worker ไปแล้ว ชี้ `VITE_WORKER_URL` ไปที่ worker URL จริงแล้ว `npm run dev` อย่างเดียวพอ
 
 ## Deploy
 
-Cloudflare Pages — build command: `npm run build`, output: `dist`
+**Worker (ทำครั้งแรกก่อน):**
+```bash
+cd worker
+npx wrangler secret put GEMINI_API_KEY   # ใส่ key
+npx wrangler deploy
+```
+
+**Frontend (Cloudflare Pages):**
+- Build command: `npm run build`
+- Output directory: `dist`
+- Env var: `VITE_WORKER_URL=https://your-worker.workers.dev`
