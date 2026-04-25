@@ -29,6 +29,7 @@ export default {
       body: JSON.stringify({
         secret: env.TURNSTILE_SECRET,
         response: turnstileToken,
+        remoteip: request.headers.get("CF-Connecting-IP"),
       }),
     })
     const verifyData = await verifyRes.json()

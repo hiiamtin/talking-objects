@@ -70,20 +70,26 @@ export default function App() {
 
   useEffect(() => {
     if (appState !== 'captured' || !needsTurnstile) return
-    turnstileWidgetRef.current = null
     setTurnstileToken(null)
+    let widgetId = null
     const id = setTimeout(() => {
-      const el = document.getElementById('turnstile-captured')
-      if (el && window.turnstile && !turnstileWidgetRef.current) {
-        turnstileWidgetRef.current = window.turnstile.render('#turnstile-captured', {
+      if (window.turnstile) {
+        widgetId = window.turnstile.render('#turnstile-captured', {
           sitekey: TURNSTILE_SITE_KEY,
           callback: (token) => setTurnstileToken(token),
           'expired-callback': () => setTurnstileToken(null),
           'error-callback': () => setTurnstileToken(null),
         })
+        turnstileWidgetRef.current = widgetId
       }
     }, 300)
-    return () => clearTimeout(id)
+    return () => {
+      clearTimeout(id)
+      if (turnstileWidgetRef.current !== null && window.turnstile) {
+        window.turnstile.remove(turnstileWidgetRef.current)
+        turnstileWidgetRef.current = null
+      }
+    }
   }, [appState])
 
   function handleCapture(base64) {
