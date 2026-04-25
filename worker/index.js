@@ -18,6 +18,24 @@ export default {
       return new Response("Method not allowed", { status: 405, headers: cors })
     }
 
+    const turnstileToken = request.headers.get("X-Turnstile-Token")
+    if (!turnstileToken) {
+      return new Response("Missing Turnstile token", { status: 403, headers: cors })
+    }
+
+    const verifyRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        secret: env.TURNSTILE_SECRET,
+        response: turnstileToken,
+      }),
+    })
+    const verifyData = await verifyRes.json()
+    if (!verifyData.success) {
+      return new Response("Turnstile verification failed", { status: 403, headers: cors })
+    }
+
     try {
       const body = await request.json()
       const { prompt, image } = body

@@ -1,5 +1,5 @@
 // src/App.jsx
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import CameraCapture from './components/CameraCapture'
 import MoodSelector from './components/MoodSelector'
 import LangToggle from './components/LangToggle'
@@ -61,23 +61,47 @@ export default function App() {
   const [fontColor, setFontColor] = useState(null)
   const stageRef                = useRef(null)
   const bubbleRef               = useRef(null)
+  const turnstileWidgetRef      = useRef(null)
+  const [turnstileToken, setTurnstileToken] = useState(null)
   const t = UI[lang]
 
-  function handleCapture(base64) {
-    setImage(base64)
-    setAppState('captured')
+  const TURNSTILE_SITE_KEY = '0x4AAAAAADDPoIedqeUBUsiM'
+
+  function renderTurnstile(containerId) {
+    setTimeout(() => {
+      const el = document.getElementById(containerId)
+      if (el && window.turnstile && !turnstileWidgetRef.current) {
+        turnstileWidgetRef.current = window.turnstile.render(`#${containerId}`, {
+          sitekey: TURNSTILE_SITE_KEY,
+          callback: (token) => setTurnstileToken(token),
+          'expired-callback': () => setTurnstileToken(null),
+          'error-callback': () => setTurnstileToken(null),
+          appearance: 'interaction-only',
+        })
+      }
+    }, 100)
   }
 
+  const handleCapture = useCallback((base64) => {
+    setImage(base64)
+    setAppState('captured')
+    turnstileWidgetRef.current = null
+    setTurnstileToken(null)
+    renderTurnstile('turnstile-captured')
+  }, [])
+
   async function handleGenerate() {
+    if (!turnstileToken) return
     setAppState('generating')
     setError(null)
     try {
-      const text = await generateObjectVoice(image, mood, lang)
+      const text = await generateObjectVoice(image, mood, lang, turnstileToken)
       setSpeech(text)
       setAppState('result')
     } catch (err) {
       setError(err.message || t.error)
       setAppState('captured')
+      renderTurnstile('turnstile-captured')
     }
   }
 
@@ -108,9 +132,10 @@ export default function App() {
         <div className="captured-screen">
           <img src={`data:image/jpeg;base64,${image}`} className="preview-img" alt="preview" />
           <MoodSelector mood={mood} onMoodChange={setMood} moodLabels={t.moods} />
+          <div id="turnstile-captured" style={{ display: 'flex', justifyContent: 'center', margin: '0.75rem 0' }}></div>
           {error && <p className="toast-error">{error}</p>}
           <div className="action-row">
-            <button className="btn-primary" onClick={handleGenerate}>{t.generate}</button>
+            <button className="btn-primary" onClick={handleGenerate} disabled={!turnstileToken}>{t.generate}</button>
             <button className="btn-ghost" onClick={handleReset}>{t.retake}</button>
           </div>
         </div>

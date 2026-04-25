@@ -45,15 +45,17 @@ const WORKER_URL    = import.meta.env.VITE_WORKER_URL
 const GEMINI_KEY    = import.meta.env.VITE_GEMINI_API_KEY
 const GEMINI_DIRECT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent`
 
-export async function generateObjectVoice(base64Image, mood, lang) {
+export async function generateObjectVoice(base64Image, mood, lang, turnstileToken) {
   const BUSY_MSG = lang === 'th'
     ? 'สมองล้น 🤯 คิดไม่ทัน~ พักก่อนเดี๋ยวมา 💤'
     : 'brain full 🤯 gimme a sec~ be right back 💤'
 
   async function callWorker() {
+    const headers = { 'Content-Type': 'application/json' }
+    if (turnstileToken) headers['X-Turnstile-Token'] = turnstileToken
     const res = await fetch(WORKER_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ prompt: buildPrompt(mood, lang), image: base64Image }),
     })
     if (res.status === 503) throw Object.assign(new Error(BUSY_MSG), { code: 503 })
