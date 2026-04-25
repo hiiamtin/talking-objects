@@ -44,6 +44,13 @@ export default {
 
       const data = await geminiRes.json()
 
+      if (!geminiRes.ok) {
+        return new Response(JSON.stringify(data), {
+          status: geminiRes.status,
+          headers: { "Content-Type": "application/json", ...cors },
+        })
+      }
+
       return new Response(JSON.stringify(data), {
         headers: { "Content-Type": "application/json", ...cors },
       })

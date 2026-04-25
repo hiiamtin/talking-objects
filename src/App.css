@@ -261,8 +261,13 @@ body {
 }
 
 .toast-error {
-  color: #c62828;
-  font-size: 0.85rem;
+  background: linear-gradient(135deg, #FFF3E0, #FFF9C4);
+  color: #5D4037;
+  font-size: 0.95rem;
+  padding: 0.7rem 1rem;
+  border-radius: 12px;
+  text-align: center;
+  border: 1px solid #FFE0B2;
 }
 
 .error-hint {

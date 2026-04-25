@@ -46,10 +46,25 @@ const GEMINI_KEY    = import.meta.env.VITE_GEMINI_API_KEY
 const GEMINI_DIRECT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent`
 
 export async function generateObjectVoice(base64Image, mood, lang) {
-  // Dev fallback: if VITE_GEMINI_API_KEY is set, call Gemini directly from browser.
-  // Browser uses OS cert store → corporate proxy SSL works fine.
-  // Production: VITE_GEMINI_API_KEY is unset → routes through Worker proxy (key hidden server-side).
-  if (GEMINI_KEY) {
+  const BUSY_MSG = lang === 'th'
+    ? 'สมองล้น 🤯 คิดไม่ทัน~ พักก่อนเดี๋ยวมา 💤'
+    : 'brain full 🤯 gimme a sec~ be right back 💤'
+
+  async function callWorker() {
+    const res = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: buildPrompt(mood, lang), image: base64Image }),
+    })
+    if (res.status === 503) throw Object.assign(new Error(BUSY_MSG), { code: 503 })
+    if (!res.ok) throw new Error(lang === 'th' ? 'งึมงักนิดหน่อย ลองใหม่นะ 🐣' : 'oopsie, try again? 🐣')
+    const data = await res.json()
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+    if (!text) throw Object.assign(new Error(BUSY_MSG), { code: 503 })
+    return stripObjectLabel(text.trim())
+  }
+
+  async function callDirect() {
     const res = await fetch(`${GEMINI_DIRECT}?key=${GEMINI_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -61,22 +76,15 @@ export async function generateObjectVoice(base64Image, mood, lang) {
         generationConfig: { maxOutputTokens: 150, temperature: 0.9 },
       }),
     })
+    if (res.status === 503) throw Object.assign(new Error(BUSY_MSG), { code: 503 })
     if (!res.ok) throw new Error(`Gemini API error: ${res.status}`)
     const data = await res.json()
+    if (data.error?.status === 'UNAVAILABLE') throw Object.assign(new Error(BUSY_MSG), { code: 503 })
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text
-    if (!text) throw new Error('No content from Gemini')
+    if (!text) throw Object.assign(new Error(BUSY_MSG), { code: 503 })
     return stripObjectLabel(text.trim())
   }
 
-  // Production path: call Worker proxy
-  const res = await fetch(WORKER_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt: buildPrompt(mood, lang), image: base64Image }),
-  })
-  if (!res.ok) throw new Error(`API error: ${res.status}`)
-  const data = await res.json()
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text
-  if (!text) throw new Error('No content from Gemini')
-  return stripObjectLabel(text.trim())
+  if (GEMINI_KEY) return callDirect()
+  return callWorker()
 }

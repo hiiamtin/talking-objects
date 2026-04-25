@@ -75,8 +75,8 @@ export default function App() {
       const text = await generateObjectVoice(image, mood, lang)
       setSpeech(text)
       setAppState('result')
-    } catch {
-      setError(t.error)
+    } catch (err) {
+      setError(err.message || t.error)
       setAppState('captured')
     }
   }
