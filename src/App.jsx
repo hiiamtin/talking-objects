@@ -1,5 +1,5 @@
 // src/App.jsx
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import CameraCapture from './components/CameraCapture'
 import MoodSelector from './components/MoodSelector'
 import LangToggle from './components/LangToggle'
@@ -66,32 +66,33 @@ export default function App() {
   const t = UI[lang]
 
   const TURNSTILE_SITE_KEY = '0x4AAAAAADDPoIedqeUBUsiM'
+  const needsTurnstile = !import.meta.env.VITE_GEMINI_API_KEY
 
-  function renderTurnstile(containerId) {
-    setTimeout(() => {
-      const el = document.getElementById(containerId)
+  useEffect(() => {
+    if (appState !== 'captured' || !needsTurnstile) return
+    turnstileWidgetRef.current = null
+    setTurnstileToken(null)
+    const id = setTimeout(() => {
+      const el = document.getElementById('turnstile-captured')
       if (el && window.turnstile && !turnstileWidgetRef.current) {
-        turnstileWidgetRef.current = window.turnstile.render(`#${containerId}`, {
+        turnstileWidgetRef.current = window.turnstile.render('#turnstile-captured', {
           sitekey: TURNSTILE_SITE_KEY,
           callback: (token) => setTurnstileToken(token),
           'expired-callback': () => setTurnstileToken(null),
           'error-callback': () => setTurnstileToken(null),
-          appearance: 'interaction-only',
         })
       }
-    }, 100)
-  }
+    }, 300)
+    return () => clearTimeout(id)
+  }, [appState])
 
-  const handleCapture = useCallback((base64) => {
+  function handleCapture(base64) {
     setImage(base64)
     setAppState('captured')
-    turnstileWidgetRef.current = null
-    setTurnstileToken(null)
-    renderTurnstile('turnstile-captured')
-  }, [])
+  }
 
   async function handleGenerate() {
-    if (!turnstileToken) return
+    if (needsTurnstile && !turnstileToken) return
     setAppState('generating')
     setError(null)
     try {
@@ -101,7 +102,6 @@ export default function App() {
     } catch (err) {
       setError(err.message || t.error)
       setAppState('captured')
-      renderTurnstile('turnstile-captured')
     }
   }
 
@@ -135,7 +135,7 @@ export default function App() {
           <div id="turnstile-captured" style={{ display: 'flex', justifyContent: 'center', margin: '0.75rem 0' }}></div>
           {error && <p className="toast-error">{error}</p>}
           <div className="action-row">
-            <button className="btn-primary" onClick={handleGenerate} disabled={!turnstileToken}>{t.generate}</button>
+            <button className="btn-primary" onClick={handleGenerate} disabled={needsTurnstile && !turnstileToken}>{t.generate}</button>
             <button className="btn-ghost" onClick={handleReset}>{t.retake}</button>
           </div>
         </div>
