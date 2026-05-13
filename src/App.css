@@ -328,3 +328,13 @@ body {
 .row { display:flex; gap:0.5rem; flex-wrap:wrap; }
 textarea { width:100%; min-height:90px; border:1px solid #ccc; border-radius:8px; padding:0.5rem; }
 .gallery-item { border-top:1px dashed #ccc; padding-top:0.4rem; }
+.chip {
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  border: 2px solid #333;
+  background: #fff;
+  cursor: pointer;
+  font-weight: 600;
+}
+.chip.active { background: #333; color: #fff; }
+.btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
