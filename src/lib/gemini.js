@@ -1,92 +1,41 @@
-const MOOD_MAP_TH = {
-  'ตลก':    'เล่นมุกกวนๆ มี punchline พลิก expectation ตลกแบบ stand-up ไม่แดกไม่บูลลี่ ขำแบบทุกคนขำด้วยกัน',
-  'จิกกัด': 'เผา roast แรงๆ แซวหนักมือ ไม่ยั้ง แต่ยังตลกอยู่ ห้ามหยาบคาย',
-  'น่ารัก': 'น่ารัก อ้อน งอน เหมือนสัตว์เลี้ยง',
-  'จริงจัง': 'จริงจัง มีสาระ แต่ยังอบอุ่น',
-}
+const WORKER_URL = import.meta.env.VITE_WORKER_URL
+const GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY
+const GEMINI_DIRECT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent'
 
-const MOOD_MAP_EN = {
-  'ตลก':    'playful comedian with punchlines and unexpected twists, light-hearted banter — everyone laughs together, never at anyone',
-  'จิกกัด': 'savage roast, brutally honest, no holding back — still funny not mean',
-  'น่ารัก': 'cute, whiny, like a pet',
-  'จริงจัง': 'sincere, thoughtful but still warm',
-}
-
-export function buildPrompt(mood, lang) {
+function buildBlessingPrompt(mood, lang) {
+  const moodMap = {
+    th: { sweet: 'หวาน อบอุ่น', touching: 'ซึ้ง จริงใจ', cool: 'เท่ มั่นใจ', cute: 'น่ารัก สดใส', pro: 'มืออาชีพ สุภาพ' },
+    en: { sweet: 'warm and sweet', touching: 'emotional and sincere', cool: 'bold and cool', cute: 'cute and playful', pro: 'professional and polished' },
+  }
   if (lang === 'th') {
-    return `ดูภาพนี้ในใจ แล้วสวมบทบาทเป็น object หลัก (ไม่ใช่คน) ทันที
-ห้ามเขียนชื่อตัวเอง ห้ามขึ้นต้นด้วย "Object:", "ฉันคือ...", หรือการแนะนำตัวใดๆ
-พูดออกมาเลย — เหมือนมันเริ่มพูดกลางคัน รู้สึกได้ เห็นรอบข้างได้
-อ้างอิงสภาพและสถานการณ์จริงในรูปนี้ ดึงธรรมชาติ/หน้าที่/ชีวิตของตัวเองมาพูด
-tone: ${MOOD_MAP_TH[mood]}
-ห้ามเศร้า ห้ามพูดถึงความตาย ตอบเป็นภาษาไทยเท่านั้น
-2-3 ประโยคสั้นๆ ห้ามขึ้นต้นทุกประโยคด้วย "ฉัน"`
-  }
-  return `Look at this image silently, identify the main object (not a person), then immediately speak AS it.
-Do NOT write its name, do NOT start with "I am a...", "Object:", or any self-introduction.
-Jump straight into speaking — mid-thought, like it's already talking.
-Reference the real situation visible in this image. Draw on its nature, purpose, and daily life.
-Tone: ${MOOD_MAP_EN[mood]}
-No sadness, no death. Reply in English only, 2-3 short punchy sentences.
-Vary sentence starters — don't begin every sentence with "I".`
+    return `จากภาพที่ได้รับ ให้แต่งคำอวยพรครบรอบ 5 ปี SCB TechX 1 ข้อความ
+โทน: ${moodMap.th[mood]}
+ความยาวไม่เกิน 120 ตัวอักษร
+สุภาพ ปลอดภัย ไม่พาดพิงการเมือง ศาสนา ความรุนแรง
+ตอบเป็นภาษาไทยเท่านั้น และส่งเฉพาะข้อความคำอวยพร`}
+  return `Based on this image, write one blessing message for SCB TechX's 5th anniversary.
+Tone: ${moodMap.en[mood]}
+Max length: 120 characters.
+Safe, respectful, no politics/religion/violence.
+Reply in English only and output only the final blessing.`
 }
 
-// Strip leading object-identification lines the AI sometimes outputs despite the prompt
-// e.g. "Object หลัก: รถจักรยานยนต์\n..." or "ฉันคือ: ต้นไม้\n..."
-function stripObjectLabel(text) {
-  return text
-    .replace(/^(object\s*(หลัก)?\s*:\s*[^\n]+\n?)/i, '')
-    .replace(/^(ฉันคือ[^\n]*\n?)/i, '')
-    .replace(/^(i am a?n?\s+[^\n.!?]+[.\n])/i, '')
-    .trim()
-}
+export async function generateBlessingFromImage(base64Image, mood, lang) {
+  const prompt = buildBlessingPrompt(mood, lang)
+  if (!GEMINI_KEY && !WORKER_URL) throw new Error('AI service is not configured')
 
-const WORKER_URL    = import.meta.env.VITE_WORKER_URL
-const GEMINI_KEY    = import.meta.env.VITE_GEMINI_API_KEY
-const GEMINI_DIRECT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent`
-
-export async function generateObjectVoice(base64Image, mood, lang, turnstileToken) {
-  const BUSY_MSG = lang === 'th'
-    ? 'สมองล้น 🤯 คิดไม่ทัน~ พักก่อนเดี๋ยวมา 💤'
-    : 'brain full 🤯 gimme a sec~ be right back 💤'
-
-  async function callWorker() {
-    const headers = { 'Content-Type': 'application/json' }
-    if (turnstileToken) headers['X-Turnstile-Token'] = turnstileToken
-    const res = await fetch(WORKER_URL, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ prompt: buildPrompt(mood, lang), image: base64Image }),
-    })
-    if (res.status === 503) throw Object.assign(new Error(BUSY_MSG), { code: 503 })
-    if (!res.ok) throw new Error(lang === 'th' ? 'งึมงักนิดหน่อย ลองใหม่นะ 🐣' : 'oopsie, try again? 🐣')
-    const data = await res.json()
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text
-    if (!text) throw Object.assign(new Error(BUSY_MSG), { code: 503 })
-    return stripObjectLabel(text.trim())
+  const payload = {
+    contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: 'image/jpeg', data: base64Image } }] }],
+    generationConfig: { maxOutputTokens: 100, temperature: 0.8 },
   }
 
-  async function callDirect() {
-    const res = await fetch(`${GEMINI_DIRECT}?key=${GEMINI_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [
-          { text: buildPrompt(mood, lang) },
-          { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
-        ]}],
-        generationConfig: { maxOutputTokens: 150, temperature: 0.9 },
-      }),
-    })
-    if (res.status === 503) throw Object.assign(new Error(BUSY_MSG), { code: 503 })
-    if (!res.ok) throw new Error(`Gemini API error: ${res.status}`)
-    const data = await res.json()
-    if (data.error?.status === 'UNAVAILABLE') throw Object.assign(new Error(BUSY_MSG), { code: 503 })
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text
-    if (!text) throw Object.assign(new Error(BUSY_MSG), { code: 503 })
-    return stripObjectLabel(text.trim())
-  }
+  const res = GEMINI_KEY
+    ? await fetch(`${GEMINI_DIRECT}?key=${GEMINI_KEY}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+    : await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt, image: base64Image }) })
 
-  if (GEMINI_KEY) return callDirect()
-  return callWorker()
+  if (!res.ok) throw new Error(lang === 'th' ? 'AI สร้างข้อความไม่สำเร็จ ลองใหม่อีกครั้ง' : 'AI generation failed, please retry.')
+  const data = await res.json()
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
+  if (!text) throw new Error(lang === 'th' ? 'ไม่พบข้อความจาก AI' : 'No AI text found')
+  return text.slice(0, 120)
 }

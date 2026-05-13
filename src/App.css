@@ -323,3 +323,8 @@ body {
 }
 
 /* .bubble-tail removed — replaced by dynamic SVG in SpeechBubble.jsx */
+
+.card { border: 2px solid #222; border-radius: 12px; padding: 0.75rem; width: 100%; background: #fff; display:flex; flex-direction:column; gap:0.5rem; }
+.row { display:flex; gap:0.5rem; flex-wrap:wrap; }
+textarea { width:100%; min-height:90px; border:1px solid #ccc; border-radius:8px; padding:0.5rem; }
+.gallery-item { border-top:1px dashed #ccc; padding-top:0.4rem; }

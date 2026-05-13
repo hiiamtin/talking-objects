@@ -1,189 +1,88 @@
-// src/App.jsx
-import { useState, useRef, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import CameraCapture from './components/CameraCapture'
-import MoodSelector from './components/MoodSelector'
 import LangToggle from './components/LangToggle'
-import SpeechBubble from './components/SpeechBubble'
-import BubbleStyleBar from './components/BubbleStyleBar'
-import ShareBar from './components/ShareBar'
-import { generateObjectVoice } from './lib/gemini'
+import { generateBlessingFromImage } from './lib/gemini'
+import { getRandomQuote, moods } from './lib/quotes'
 import './App.css'
 
-const UI = {
+const labels = {
   th: {
-    title:      '🗯️ ฉันอยากบอกว่า',
-    generate:   '💬 คิดก่อนนะ!',
-    retake:     '↩ ถ่ายใหม่',
-    loading:    'กำลังคิดอยู่... 🤔',
-    error:      'ลองใหม่นะ 🙏',
-    save:       '💾 บันทึกรูป',
-    regenerate: '🔄 พูดใหม่',
-    openCamera: '📷 เปิดกล้อง',
-    uploadFile: '📁 เลือกรูปจากเครื่อง',
-    snapshot:   '📸 ถ่าย',
-    cancel:     'ยกเลิก',
-    or:         'หรือ',
-    noCam:      'ไม่มีสิทธิ์กล้อง — อัพโหลดรูปได้เลย',
-    flipFront:  'กล้องหน้า',
-    flipBack:   'กล้องหลัง',
-    moods:      { 'ตลก': 'ตลก', 'จิกกัด': 'จิกกัด', 'น่ารัก': 'น่ารัก', 'จริงจัง': 'จริงจัง' },
+    title: 'SCB TechX 5th Greeting Booth', consent: 'ยินยอม', start: 'เริ่มใช้งาน', modeA: 'สุ่มข้อความ', modeB: 'AI จากรูป',
+    kiosk: 'โหมด Kiosk', gen: 'สร้างคำอวยพร', download: 'ดาวน์โหลด', reset: 'เริ่มใหม่', gallery: 'แกลเลอรีหน้างาน',
+    consentText: 'ฉันยอมรับเงื่อนไขการใช้งานและการประมวลผลข้อมูลรูปภาพ', allowAi: 'ยินยอมส่งรูปให้ AI ประมวลผล (เฉพาะโหมด AI)',
   },
   en: {
-    title:      '🗯️ I want to say',
-    generate:   '💬 Let me think!',
-    retake:     '↩ Retake',
-    loading:    'Thinking... 🤔',
-    error:      'Try again 🙏',
-    save:       '💾 Save image',
-    regenerate: '🔄 Say again',
-    openCamera: '📷 Open camera',
-    uploadFile: '📁 Choose from device',
-    snapshot:   '📸 Snap',
-    cancel:     'Cancel',
-    or:         'or',
-    noCam:      'No camera access — upload instead',
-    flipFront:  'Front cam',
-    flipBack:   'Back cam',
-    moods:      { 'ตลก': 'Funny', 'จิกกัด': 'Sarcastic', 'น่ารัก': 'Cute', 'จริงจัง': 'Serious' },
+    title: 'SCB TechX 5th Greeting Booth', consent: 'Consent', start: 'Start', modeA: 'Random message', modeB: 'AI from photo',
+    kiosk: 'Kiosk mode', gen: 'Generate blessing', download: 'Download', reset: 'Restart', gallery: 'Event gallery',
+    consentText: 'I accept terms and consent to image data processing', allowAi: 'Allow AI image processing (required for AI mode)',
   },
 }
 
-export default function App() {
-  const [appState, setAppState] = useState('idle')
-  const [image, setImage]       = useState(null)
-  const [mood, setMood]         = useState('ตลก')
-  const [lang, setLang]         = useState('th')
-  const [speech, setSpeech]     = useState('')
-  const [error, setError]       = useState(null)
-  const [tailDir, setTailDir]     = useState('auto')
-  const [bubbleBg, setBubbleBg]   = useState('white')
-  const [fontSize, setFontSize]   = useState('md')
-  const [fontColor, setFontColor] = useState(null)
-  const stageRef                = useRef(null)
-  const bubbleRef               = useRef(null)
-  const turnstileWidgetRef      = useRef(null)
-  const [turnstileToken, setTurnstileToken] = useState(null)
-  const t = UI[lang]
+const FRAMES = ['💜 Classic', '✨ Minimal', '🎉 Party', '🚀 Future', '🌈 Cute', '🏆 Premium']
 
-  const TURNSTILE_SITE_KEY = '0x4AAAAAADDPoIedqeUBUsiM'
-  const needsTurnstile = !import.meta.env.VITE_GEMINI_API_KEY
+export default function App() {
+  const [lang, setLang] = useState('th')
+  const t = labels[lang]
+  const [consented, setConsented] = useState(false)
+  const [allowAi, setAllowAi] = useState(false)
+  const [mode, setMode] = useState('random')
+  const [kiosk, setKiosk] = useState(false)
+  const [image, setImage] = useState(null)
+  const [mood, setMood] = useState(moods[0])
+  const [frame, setFrame] = useState(FRAMES[0])
+  const [text, setText] = useState('')
+  const [gallery, setGallery] = useState(() => JSON.parse(localStorage.getItem('gallery') || '[]'))
 
   useEffect(() => {
-    if (appState !== 'captured' || !needsTurnstile) return
-    setTurnstileToken(null)
-    let widgetId = null
-    const id = setTimeout(() => {
-      if (window.turnstile) {
-        widgetId = window.turnstile.render('#turnstile-captured', {
-          sitekey: TURNSTILE_SITE_KEY,
-          callback: (token) => setTurnstileToken(token),
-          'expired-callback': () => setTurnstileToken(null),
-          'error-callback': () => setTurnstileToken(null),
-        })
-        turnstileWidgetRef.current = widgetId
-      }
-    }, 300)
-    return () => {
-      clearTimeout(id)
-      if (turnstileWidgetRef.current !== null && window.turnstile) {
-        window.turnstile.remove(turnstileWidgetRef.current)
-        turnstileWidgetRef.current = null
-      }
-    }
-  }, [appState])
+    localStorage.setItem('gallery', JSON.stringify(gallery.slice(0, 20)))
+  }, [gallery])
 
-  function handleCapture(base64) {
-    setImage(base64)
-    setAppState('captured')
+  useEffect(() => {
+    if (!kiosk) return
+    const timer = setTimeout(() => resetAll(), 45000)
+    return () => clearTimeout(timer)
+  }, [kiosk, image, text, mode, mood, frame])
+
+  const canStart = consented && (mode === 'random' || allowAi)
+
+  async function generate() {
+    if (mode === 'random') setText(getRandomQuote(lang, mood))
+    else setText(await generateBlessingFromImage(image, mood, lang))
   }
 
-  async function handleGenerate() {
-    if (needsTurnstile && !turnstileToken) return
-    setAppState('generating')
-    setError(null)
-    try {
-      const text = await generateObjectVoice(image, mood, lang, turnstileToken)
-      setSpeech(text)
-      setAppState('result')
-    } catch (err) {
-      setError(err.message || t.error)
-      setAppState('captured')
-    }
+  const downloadHref = useMemo(() => {
+    const payload = `${frame}\n${text}`
+    return `data:text/plain;charset=utf-8,${encodeURIComponent(payload)}`
+  }, [frame, text])
+
+  function saveToGallery() {
+    setGallery(prev => [{ id: Date.now(), frame, text, image }, ...prev])
   }
 
-  function handleReset() {
-    setImage(null)
-    setSpeech('')
-    setError(null)
-    setAppState('idle')
-  }
+  function resetAll() { setImage(null); setText('') }
 
-  return (
-    <div className="app">
-      <header className="app-header">
-        <h1 className="app-title">{t.title}</h1>
-        {appState !== 'result' && (
-          <LangToggle lang={lang} onLangChange={setLang} />
-        )}
-      </header>
+  return <div className="app">
+    <header className="app-header"><h1>{t.title}</h1><LangToggle lang={lang} onLangChange={setLang} /></header>
+    <button className="btn-ghost" onClick={() => setKiosk(v => !v)}>{t.kiosk}: {kiosk ? 'ON' : 'OFF'}</button>
 
-      {appState === 'idle' && (
-        <div className="idle-screen">
-          <MoodSelector mood={mood} onMoodChange={setMood} moodLabels={t.moods} />
-          <CameraCapture onCapture={handleCapture} t={t} />
-        </div>
-      )}
+    {!consented && <section className="card"><h3>{t.consent}</h3><p>Retention config: 1 day (for gallery display).</p>
+      <label><input type="checkbox" onChange={e => setConsented(e.target.checked)} /> {t.consentText}</label>
+      <label><input type="checkbox" onChange={e => setAllowAi(e.target.checked)} /> {t.allowAi}</label></section>}
 
-      {appState === 'captured' && (
-        <div className="captured-screen">
-          <img src={`data:image/jpeg;base64,${image}`} className="preview-img" alt="preview" />
-          <MoodSelector mood={mood} onMoodChange={setMood} moodLabels={t.moods} />
-          <div id="turnstile-captured" style={{ display: 'flex', justifyContent: 'center', margin: '0.75rem 0' }}></div>
-          {error && <p className="toast-error">{error}</p>}
-          <div className="action-row">
-            <button className="btn-primary" onClick={handleGenerate} disabled={needsTurnstile && !turnstileToken}>{t.generate}</button>
-            <button className="btn-ghost" onClick={handleReset}>{t.retake}</button>
-          </div>
-        </div>
-      )}
+    {consented && !image && <section className="card">
+      <div className="row"><button className={mode==='random'?'btn-primary':'btn-secondary'} onClick={()=>setMode('random')}>{t.modeA}</button>
+      <button className={mode==='ai'?'btn-primary':'btn-secondary'} onClick={()=>setMode('ai')}>{t.modeB}</button></div>
+      <div className="row">{moods.map(m => <button key={m} className="btn-secondary" onClick={()=>setMood(m)}>{m}</button>)}</div>
+      <div className="row">{FRAMES.map(f => <button key={f} className="btn-ghost" onClick={()=>setFrame(f)}>{f}</button>)}</div>
+      {(mode === 'random' || canStart) && <CameraCapture onCapture={setImage} t={{ openCamera:'Open camera', uploadFile:'Upload', snapshot:'Snap', cancel:'Cancel', or:'or' }} />}
+    </section>}
 
-      {appState === 'generating' && (
-        <div className="generating-screen">
-          <img src={`data:image/jpeg;base64,${image}`} className="preview-img loading" alt="processing" />
-          <p className="loading-text">{t.loading}</p>
-        </div>
-      )}
+    {image && <section className="card"><img className="preview-img" src={`data:image/jpeg;base64,${image}`} />
+      <button className="btn-primary" onClick={generate}>{t.gen}</button>
+      {!!text && <><p>{frame}</p><textarea maxLength={120} value={text} onChange={e=>setText(e.target.value)} />
+        <div className="row"><a className="btn-secondary" href={downloadHref} download="greeting.txt">{t.download}</a>
+        <button className="btn-secondary" onClick={saveToGallery}>Add to Gallery</button><button className="btn-ghost" onClick={resetAll}>{t.reset}</button></div></>}</section>}
 
-      {appState === 'result' && (
-        <div className="result-screen">
-          <SpeechBubble
-            image={image}
-            speech={speech}
-            containerRef={stageRef}
-            bubbleRef={bubbleRef}
-            tailDir={tailDir}
-            bubbleBg={bubbleBg}
-            fontSize={fontSize}
-            fontColor={fontColor}
-          />
-          <BubbleStyleBar
-            tailDir={tailDir}   onTailDir={setTailDir}
-            bubbleBg={bubbleBg} onBubbleBg={setBubbleBg}
-            fontSize={fontSize} onFontSize={setFontSize}
-            fontColor={fontColor} onFontColor={setFontColor}
-          />
-          <ShareBar
-            stageRef={stageRef}
-            bubbleRef={bubbleRef}
-            imageBase64={image}
-            tailDir={tailDir}
-            bubbleBg={bubbleBg}
-            onRegenerate={handleGenerate}
-            onReset={handleReset}
-            t={t}
-          />
-        </div>
-      )}
-    </div>
-  )
+    <section className="card"><h3>{t.gallery}</h3>{gallery.map(item => <div key={item.id} className="gallery-item"><span>{item.frame}</span><p>{item.text}</p></div>)}</section>
+  </div>
 }
